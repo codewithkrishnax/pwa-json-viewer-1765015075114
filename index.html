@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes" />
+  <title>JSON Viewer </title>
+  
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="icon-192.png" />
+  
+  <meta name="theme-color" content="#a855f7" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="JSON Viewer " />
+  <link rel="apple-touch-icon" href="icon-512.png" />
+  
+  <style>
+    * { box-sizing: border-box; }
+    html, body { 
+      margin: 0; 
+      padding: 0; 
+      width: 100%; 
+      height: 100%; 
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Viewer Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+      body {}
+      .tree-toggler {
+        transition: transform 0.3s ease;
+      }
+      .tree-toggler.expanded {
+        transform: rotate(90deg);
+      }
+      mark {
+        background-color: #fbbf24;
+        color: #1f2937;
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen">
+    <div class="max-w-7xl mx-auto h-screen flex flex-col">
+      <!-- Header -->
+      <header class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 shadow-lg">
+        <div class="flex justify-between items-center">
+          <h3 class="text-md font-bold flex items-center gap-2">
+            <i class="fas fa-code"></i>
+            JSON Viewer
+          </h3>
+          <div class="flex gap-2 bg-slate-800 rounded-lg p-1">
+            <button id="tree-view-btn" class="px-4 py-2 rounded-md bg-blue-500 text-white font-semibold transition">
+              <i class="fas fa-sitemap mr-2"></i>Tree
+            </button>
+            <button id="code-view-btn" class="px-4 py-2 rounded-md text-gray-300 hover:bg-slate-700 font-semibold transition">
+              <i class="fas fa-file-code mr-2"></i>Code
+            </button>
+          </div>
+        </div>
+      </header>
+      <!-- Search Bar -->
+      <div class="bg-slate-800 px-6 py-3 border-b border-slate-700">
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <input type="text" id="search-input" placeholder="Search keys and values..." class="w-full bg-slate-900 text-white pl-10 pr-4 py-3 rounded-lg border border-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+      </div>
+      <!-- Main Content -->
+      <main class="flex-1 overflow-auto bg-slate-800">
+        <!-- Expand All Button -->
+        <div id="expand-all-container" class="hidden sticky top-0 z-10 p-4 bg-slate-800 border-b border-slate-700">
+          <button id="expand-all-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center gap-2">
+            <i class="fas fa-expand-alt"></i>
+            <span>Expand All</span>
+          </button>
+        </div>
+        <!-- Tree View -->
+        <div id="json-tree-view" class="p-6"></div>
+        <!-- Code View -->
+        <div id="json-code-view" class="hidden p-6">
+          <pre class="bg-slate-900 text-gray-100 p-4 rounded-lg overflow-x-auto"><code id="json-output"></code></pre>
+        </div>
+        <!-- Welcome Message -->
+        <div id="welcome-message" class="flex flex-col items-center justify-center h-full text-center p-8">
+          <i class="fas fa-file-code text-6xl text-gray-600 mb-4"></i>
+          <h2 class="text-2xl font-bold text-gray-400 mb-2">No JSON Loaded</h2>
+          <p class="text-gray-500">Load a file, paste JSON, or try a sample to get started</p>
+        </div>
+      </main>
+      <!-- Footer Actions -->
+      <footer class="bg-slate-800 border-t border-slate-700 px-6 py-4">
+        <div class="grid grid-cols-4 gap-4">
+          <input type="file" id="file-input" accept=".json" class="hidden">
+          <button id="load-file-btn" class="flex flex-col items-center gap-2 bg-slate-700 hover:bg-slate-600 text-blue-400 py-3 rounded-lg font-semibold transition">
+            <i class="fas fa-upload text-xl"></i>
+            <span class="text-sm">Load File</span>
+          </button>
+          <button id="paste-btn" class="flex flex-col items-center gap-2 bg-slate-700 hover:bg-slate-600 text-green-400 py-3 rounded-lg font-semibold transition">
+            <i class="fas fa-paste text-xl"></i>
+            <span class="text-sm">Paste</span>
+          </button>
+          <button id="sample-btn" class="flex flex-col items-center gap-2 bg-slate-700 hover:bg-slate-600 text-purple-400 py-3 rounded-lg font-semibold transition">
+            <i class="fas fa-flask text-xl"></i>
+            <span class="text-sm">Sample</span>
+          </button>
+          <button id="clear-btn" class="flex flex-col items-center gap-2 bg-slate-700 hover:bg-slate-600 text-red-400 py-3 rounded-lg font-semibold transition">
+            <i class="fas fa-trash text-xl"></i>
+            <span class="text-sm">Clear</span>
+          </button>
+        </div>
+      </footer>
+    </div>
+    <script>
+      const state = {
+        currentView: 'tree',
+        jsonObj: null,
+        jsonString: '',
+        allExpanded: false
+      };
+      const els = {
+        searchInput: document.getElementById('search-input'),
+        welcomeMessage: document.getElementById('welcome-message'),
+        treeViewBtn: document.getElementById('tree-view-btn'),
+        codeViewBtn: document.getElementById('code-view-btn'),
+        jsonTreeView: document.getElementById('json-tree-view'),
+        jsonCodeView: document.getElementById('json-code-view'),
+        jsonOutput: document.getElementById('json-output'),
+        loadFileBtn: document.getElementById('load-file-btn'),
+        fileInput: document.getElementById('file-input'),
+        pasteBtn: document.getElementById('paste-btn'),
+        sampleBtn: document.getElementById('sample-btn'),
+        clearBtn: document.getElementById('clear-btn'),
+        expandAllBtn: document.getElementById('expand-all-btn'),
+        expandAllContainer: document.getElementById('expand-all-container')
+      };
+      const sampleJson = {
+        "user": {
+          "id": 12345,
+          "name": "Alice Johnson",
+          "email": "alice@example.com",
+          "isActive": true,
+          "role": "admin",
+          "metadata": null
+        },
+        "orders": [{
+            "orderId": "ORD-001",
+            "items": ["Laptop", "Mouse", "Keyboard"],
+            "total": 1299.99,
+            "shipped": true
+          },
+          {
+            "orderId": "ORD-002",
+            "items": ["Monitor", "HDMI Cable"],
+            "total": 449.50,
+            "shipped": false
+          }
+        ],
+        "settings": {
+          "theme": "dark",
+          "notifications": {
+            "email": true,
+            "sms": false,
+            "push": true
+          },
+          "privacy": {
+            "shareData": false,
+            "analytics": true
+          }
+        }
+      };
+      function toggleVisibility() {
+        const hasData = state.jsonObj !== null;
+        els.welcomeMessage.classList.toggle('hidden', hasData);
+        els.expandAllContainer.classList.toggle('hidden', !hasData || state.currentView !== 'tree');
+        if (hasData) {
+          els.jsonTreeView.classList.toggle('hidden', state.currentView !== 'tree');
+          els.jsonCodeView.classList.toggle('hidden', state.currentView !== 'code');
+        } else {
+          els.jsonTreeView.classList.add('hidden');
+          els.jsonCodeView.classList.add('hidden');
+        }
+      }
+      function updateJsonData(rawJson) {
+        if (!rawJson.trim()) {
+          state.jsonObj = null;
+          state.jsonString = '';
+          render();
+          return;
+        }
+        try {
+          state.jsonObj = JSON.parse(rawJson);
+          state.jsonString = JSON.stringify(state.jsonObj, null, 2);
+          render();
+        } catch (e) {
+          alert('❌ Invalid JSON: ' + e.message);
+        }
+      }
+      function createTreeNode(key, value, isArrayElement = false, index = null) {
+        const type = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
+        const node = document.createElement('div');
+        node.className = 'my-1';
+        const content = document.createElement('div');
+        content.className = 'flex items-start p-2 rounded hover:bg-slate-700 transition cursor-default';
+        const isCollapsible = type === 'object' || type === 'array';
+        if (isCollapsible) {
+          const toggler = document.createElement('i');
+          toggler.className = 'fas fa-chevron-right tree-toggler text-gray-500 mr-2 mt-1 cursor-pointer hover:text-blue-400';
+          content.appendChild(toggler);
+        } else {
+          const spacer = document.createElement('span');
+          spacer.className = 'w-6 inline-block';
+          content.appendChild(spacer);
+        }
+        if (isArrayElement) {
+          const indexSpan = document.createElement('span');
+          indexSpan.className = 'text-gray-500 text-sm mr-2 min-w-[40px] text-right';
+          indexSpan.textContent = `[${index}]`;
+          content.appendChild(indexSpan);
+        } else {
+          const keySpan = document.createElement('span');
+          keySpan.className = 'text-blue-400 font-semibold mr-2';
+          keySpan.textContent = `"${key}"`;
+          content.appendChild(keySpan);
+          const colon = document.createElement('span');
+          colon.className = 'text-gray-400 mr-2';
+          colon.textContent = ':';
+          content.appendChild(colon);
+        }
+        if (isCollapsible) {
+          const bracket = document.createElement('span');
+          bracket.className = 'text-yellow-400 font-bold';
+          bracket.textContent = type === 'array' ? '[' : '{';
+          content.appendChild(bracket);
+          const summary = document.createElement('span');
+          summary.className = 'tree-summary text-gray-500 text-sm ml-2 italic';
+          const count = type === 'array' ? value.length : Object.keys(value).length;
+          summary.textContent = `${count} item${count !== 1 ? 's' : ''}`;
+          content.appendChild(summary);
+          const closeBracket = document.createElement('span');
+          closeBracket.className = 'tree-bracket-close text-yellow-400 font-bold hidden';
+          closeBracket.textContent = type === 'array' ? ']' : '}';
+          content.appendChild(closeBracket);
+          node.appendChild(content);
+          const nested = document.createElement('div');
+          nested.className = 'tree-nested ml-6 pl-4 border-l-2 border-slate-700 hidden mt-1';
+          if (type === 'array') {
+            value.forEach((item, idx) => {
+              nested.appendChild(createTreeNode(idx, item, true, idx));
+            });
+          } else {
+            Object.entries(value).forEach(([k, v]) => {
+              nested.appendChild(createTreeNode(k, v, false));
+            });
+          }
+          node.appendChild(nested);
+        } else {
+          const valueSpan = document.createElement('span');
+          valueSpan.className = type === 'string' ? 'text-green-400' :
+            type === 'number' ? 'text-orange-400' :
+            type === 'boolean' ? 'text-purple-400' :
+            'text-red-400 italic';
+          if (type === 'string') {
+            valueSpan.textContent = `"${value}"`;
+          } else {
+            valueSpan.textContent = String(value);
+          }
+          content.appendChild(valueSpan);
+          node.appendChild(content);
+        }
+        return node;
+      }
+      function renderTreeView() {
+        els.jsonTreeView.innerHTML = '';
+        state.allExpanded = false;
+        els.expandAllBtn.innerHTML = '<i class="fas fa-expand-alt"></i><span>Expand All</span>';
+        if (Array.isArray(state.jsonObj)) {
+          state.jsonObj.forEach((item, idx) => {
+            els.jsonTreeView.appendChild(createTreeNode(idx, item, true, idx));
+          });
+        } else {
+          Object.entries(state.jsonObj).forEach(([k, v]) => {
+            els.jsonTreeView.appendChild(createTreeNode(k, v, false));
+          });
+        }
+      }
+      function renderCodeView() {
+        const highlighted = syntaxHighlight(escapeHtml(state.jsonString));
+        els.jsonOutput.innerHTML = highlighted;
+      }
+      function syntaxHighlight(html) {
+        html = html.replace(/("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*")(\s*:)?/g, (match, p1, p2, p3) => {
+          const color = p3 ? 'color:#60a5fa' : 'color:#4ade80';
+          return `<span style="${color}">${p1}</span>${p3 || ''}`;
+        });
+        html = html.replace(/\b(true|false)\b/g, '<span style="color:#a78bfa">$&</span>');
+        html = html.replace(/\b(null)\b/g, '<span style="color:#ef4444">$&</span>');
+        html = html.replace(/\b-?\d+(\.\d+)?([eE][+-]?\d+)?\b/g, '<span style="color:#fb923c">$&</span>');
+        return html;
+      }
+      function escapeHtml(text) {
+        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+      function render() {
+        toggleVisibility();
+        if (!state.jsonObj) return;
+        if (state.currentView === 'tree') {
+          renderTreeView();
+        } else {
+          renderCodeView();
+        }
+        handleSearch();
+      }
+      function handleSearch() {
+        const term = els.searchInput.value.toLowerCase().trim();
+        if (state.currentView === 'tree') {
+          const allNodes = els.jsonTreeView.querySelectorAll('.my-1');
+          allNodes.forEach(node => {
+            const content = node.querySelector('.flex');
+            if (!content) return;
+            const origHtml = content.innerHTML.replace(/<mark[^>]*>|<\/mark>/g, '');
+            content.innerHTML = origHtml;
+            if (term) {
+              const text = content.textContent.toLowerCase();
+              if (text.includes(term)) {
+                const regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                content.innerHTML = content.innerHTML.replace(/>([^<]+)</g, (match, txt) => {
+                  return '>' + txt.replace(regex, '<mark>$&</mark>') + '<';
+                });
+                let parent = node.parentElement;
+                while (parent && parent !== els.jsonTreeView) {
+                  if (parent.classList.contains('my-1')) {
+                    const nested = parent.querySelector('.tree-nested');
+                    const toggler = parent.querySelector('.tree-toggler');
+                    if (nested && toggler) {
+                      nested.classList.remove('hidden');
+                      parent.querySelector('.tree-summary').classList.add('hidden');
+                      parent.querySelector('.tree-bracket-close').classList.remove('hidden');
+                      toggler.classList.add('expanded');
+                    }
+                  }
+                  parent = parent.parentElement;
+                }
+              }
+            }
+          });
+        } else {
+          let html = syntaxHighlight(escapeHtml(state.jsonString));
+          if (term) {
+            const regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+            html = html.replace(/>([^<]+)</g, (match, txt) => `>${txt.replace(regex, '<mark>$&</mark>')}<`);
+          }
+          els.jsonOutput.innerHTML = html;
+        }
+      }
+      function toggleExpandAll() {
+        state.allExpanded = !state.allExpanded;
+        if (state.allExpanded) {
+          els.expandAllBtn.innerHTML = '<i class="fas fa-compress-alt"></i><span>Collapse All</span>';
+        } else {
+          els.expandAllBtn.innerHTML = '<i class="fas fa-expand-alt"></i><span>Expand All</span>';
+        }
+        const allTogglers = els.jsonTreeView.querySelectorAll('.tree-toggler');
+        allTogglers.forEach(toggler => {
+          const node = toggler.closest('.my-1');
+          const nested = node.querySelector('.tree-nested');
+          const summary = node.querySelector('.tree-summary');
+          const closeBracket = node.querySelector('.tree-bracket-close');
+          if (state.allExpanded) {
+            nested.classList.remove('hidden');
+            summary.classList.add('hidden');
+            closeBracket.classList.remove('hidden');
+            toggler.classList.add('expanded');
+          } else {
+            nested.classList.add('hidden');
+            summary.classList.remove('hidden');
+            closeBracket.classList.add('hidden');
+            toggler.classList.remove('expanded');
+          }
+        });
+      }
+      // Event Listeners
+      els.treeViewBtn.addEventListener('click', () => {
+        if (state.currentView !== 'tree' && state.jsonObj) {
+          state.currentView = 'tree';
+          els.treeViewBtn.className = 'px-4 py-2 rounded-md bg-blue-500 text-white font-semibold transition';
+          els.codeViewBtn.className = 'px-4 py-2 rounded-md text-gray-300 hover:bg-slate-700 font-semibold transition';
+          render();
+        }
+      });
+      els.codeViewBtn.addEventListener('click', () => {
+        if (state.currentView !== 'code' && state.jsonObj) {
+          state.currentView = 'code';
+          els.codeViewBtn.className = 'px-4 py-2 rounded-md bg-blue-500 text-white font-semibold transition';
+          els.treeViewBtn.className = 'px-4 py-2 rounded-md text-gray-300 hover:bg-slate-700 font-semibold transition';
+          render();
+        }
+      });
+      els.jsonTreeView.addEventListener('click', e => {
+        const toggler = e.target.closest('.tree-toggler');
+        if (!toggler) return;
+        const node = toggler.closest('.my-1');
+        const nested = node.querySelector('.tree-nested');
+        const summary = node.querySelector('.tree-summary');
+        const closeBracket = node.querySelector('.tree-bracket-close');
+        nested.classList.toggle('hidden');
+        summary.classList.toggle('hidden');
+        closeBracket.classList.toggle('hidden');
+        toggler.classList.toggle('expanded');
+      });
+      els.searchInput.addEventListener('input', handleSearch);
+      els.pasteBtn.addEventListener('click', async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          updateJsonData(text);
+        } catch (err) {
+          alert('❌ Failed to read clipboard. Please grant permission.');
+        }
+      });
+      els.sampleBtn.addEventListener('click', () => {
+        updateJsonData(JSON.stringify(sampleJson, null, 2));
+      });
+      els.clearBtn.addEventListener('click', () => {
+        els.searchInput.value = '';
+        updateJsonData('');
+      });
+      els.loadFileBtn.addEventListener('click', () => {
+        els.fileInput.click();
+      });
+      els.fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          updateJsonData(event.target.result);
+        };
+        reader.onerror = () => {
+          alert('❌ Error reading file');
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      });
+      els.expandAllBtn.addEventListener('click', toggleExpandAll);
+      // Initialize
+      toggleVisibility();
+    </script>
+  </body>
+</html>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW registered'))
+      .catch(err => console.error('SW error:', err));
+  });
+}
+
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  deferredPrompt = e;
+});
+
+window.installPWA = async function() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    return outcome;
+  }
+  return 'not_available';
+};
+</script>
+</body>
+</html>
